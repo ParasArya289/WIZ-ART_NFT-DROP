@@ -15,7 +15,6 @@ import toast, { Toaster } from 'react-hot-toast'
 interface Props {
   collection: Collection
 }
-
 function NFTDropPage({ collection }: Props) {
   const [claimedSupply, setClaimedSupply] = useState<number>(0)
   const [totalSupply, setTotalSupply] = useState<BigNumber>()
@@ -33,6 +32,9 @@ function NFTDropPage({ collection }: Props) {
   const address = useAddress()
   const disconnect = useDisconnect()
 
+
+
+
   useEffect(() => {
     if (!nftDrop) return
 
@@ -44,16 +46,32 @@ function NFTDropPage({ collection }: Props) {
     }
     fetchPrice()
   }, [nftDrop])
+
   ///////////// TEST
   useEffect(() => {
+    const timeout = function () {
+      return new Promise(function (_, reject) {
+        setTimeout(function () {
+          reject(new Error(`Request took too long! Timeout after ${5} second`))
+        }, 8 * 1000)
+      })
+    }
     const fetchNextNFTImg = async () => {
-      setImageLoading(true)
-      if (!nftDrop) return
-      const [{ image }] = await nftDrop.getAllUnclaimed()
-      console.log(image)
-      setCurrentImage(`${image}
-      `)
-      setImageLoading(false)
+      try {
+        setImageLoading(true)
+        if (!nftDrop) return
+        const [{ image }]:any = await Promise.race([
+          nftDrop.getAllUnclaimed(),
+          timeout(),
+        ])
+        // const [{ image }] = await nftDrop.getAllUnclaimed()
+        console.log(image)
+        setCurrentImage(image)
+      } catch (err) {
+        console.log(err)
+      } finally {
+        setImageLoading(false)
+      }
     }
     fetchNextNFTImg()
   }, [nftDrop])
@@ -107,12 +125,12 @@ function NFTDropPage({ collection }: Props) {
           },
         })
 
-        console.log(receipt)
-        console.log(claimedTokenID)
-        console.log(claimedNFT)
+        // console.log(receipt)
+        // console.log(claimedTokenID)
+        // console.log(claimedNFT)
       })
       .catch((err) => {
-        console.log(err)
+        console.error(err)
         toast('Oops... Something went wrong!', {
           style: {
             background: 'red',
@@ -145,8 +163,8 @@ function NFTDropPage({ collection }: Props) {
               </div>
             ) : (
               <img
-                className="w-44 rounded-xl object-cover lg:h-auto lg:w-auto"
-                src={currentImage || urlFor(collection.mainImage).url()}
+                className="w-44 rounded-xl object-cover lg:h-56 lg:w-auto"
+                src={currentImage || urlFor(collection.previewImage).url()}
                 alt="NFT"
               />
             )}
@@ -192,7 +210,7 @@ function NFTDropPage({ collection }: Props) {
         {/* Content */}
         <div className="mt-10 flex flex-1 flex-col items-center space-y-6 text-center lg:justify-center lg:space-y-0">
           <img
-            className="w-80 object-cover pb-10 lg:h-40"
+            className="w-80 object-cover pb-10 lg:h-60"
             src={urlFor(collection.mainImage).url()}
             alt=""
           />
@@ -272,6 +290,7 @@ export const getServerSideProps: GetServerSideProps = async ({ params }) => {
   })
 
   if (!collection) {
+      //returns 404 page
     return {
       notFound: true,
     }
