@@ -1,63 +1,183 @@
-import react from 'react'
-import { useAddress, useDisconnect, useMetamask } from '@thirdweb-dev/react'
+import react, { useEffect, useState } from 'react'
+import {
+  useAddress,
+  useDisconnect,
+  useMetamask,
+  useNFTDrop,
+} from '@thirdweb-dev/react'
 import { GetServerSideProps } from 'next'
 import { sanityClient, urlFor } from '../../sanity'
 import { Collection } from '../../typing'
 import Link from 'next/link'
+import { BigNumber } from '@ethersproject/bignumber'
+import toast, { Toaster } from 'react-hot-toast'
 
 interface Props {
-    collection: Collection
+  collection: Collection
 }
 
-function NFTDropPage({collection}:Props) {
-  //Authentication
+function NFTDropPage({ collection }: Props) {
+  const [claimedSupply, setClaimedSupply] = useState<number>(0)
+  const [totalSupply, setTotalSupply] = useState<BigNumber>()
+  const [priceInEth, setPriceInEth] = useState<string>()
+  const [loading, setLoading] = useState<boolean>(true)
+  const [priceLoading, setPriceLoading] = useState<boolean>(true)
+  const [imageLoading, setImageLoading] = useState<boolean>(true)
+
+  const [currentImage, setCurrentImage] = useState<string>('')
+
+  const nftDrop = useNFTDrop(collection.address)
+
+  ////Authentication///
   const connectWithMetaMask = useMetamask()
   const address = useAddress()
   const disconnect = useDisconnect()
 
-  console.log(address)
-  console.log(collection.nftcollectionName)
+  useEffect(() => {
+    if (!nftDrop) return
 
+    const fetchPrice = async () => {
+      setPriceLoading(true)
+      const claimConditions = await nftDrop.claimConditions.getAll()
+      setPriceInEth(claimConditions?.[0].currencyMetadata.displayValue)
+      setPriceLoading(false)
+    }
+    fetchPrice()
+  }, [nftDrop])
+  ///////////// TEST
+  useEffect(() => {
+    const fetchNextNFTImg = async () => {
+      setImageLoading(true)
+      if (!nftDrop) return
+      const [{ image }] = await nftDrop.getAllUnclaimed()
+      console.log(image)
+      setCurrentImage(`${image}
+      `)
+      setImageLoading(false)
+    }
+    fetchNextNFTImg()
+  }, [nftDrop])
+
+  //fetch claimed and total info
+  useEffect(() => {
+    if (!nftDrop) return
+
+    const fetchNFTDropData = async () => {
+      setLoading(true)
+      const claimed = await nftDrop.getAllClaimed()
+      const total = await nftDrop.totalSupply()
+      setClaimedSupply(claimed.length)
+      setTotalSupply(total)
+
+      setLoading(false)
+    }
+    fetchNFTDropData()
+  }, [nftDrop])
+
+  const mintNFT = () => {
+    if (!nftDrop || !address) return
+
+    const quantity = 1
+    setLoading(true)
+    const notification = toast.loading('Please Wait Minting...', {
+      style: {
+        background: 'white',
+        color: 'green',
+        fontWeight: '17px',
+        padding: '20px',
+      },
+    })
+
+    //returns promise
+    nftDrop
+      .claimTo(address, quantity)
+      .then(async (tx) => {
+        const receipt = tx[0].receipt // transaction receipt
+        const claimedTokenID = tx[0].id // id of the claimed NFT
+        const claimedNFT = await tx[0].data()
+
+        toast('Successfully Minted NFT', {
+          duration: 8000,
+          style: {
+            background: 'green',
+            color: 'white',
+            fontWeight: 'bolder',
+            fontSize: '17px',
+            padding: '20px',
+          },
+        })
+
+        console.log(receipt)
+        console.log(claimedTokenID)
+        console.log(claimedNFT)
+      })
+      .catch((err) => {
+        console.log(err)
+        toast('Oops... Something went wrong!', {
+          style: {
+            background: 'red',
+            color: 'white',
+            fontWeight: 'bolder',
+            fontSize: '17px',
+            padding: '20px',
+          },
+        })
+      })
+      .finally(() => {
+        setLoading(false)
+        toast.dismiss(notification)
+      })
+  }
   return (
     <div className="flex h-screen flex-col lg:grid lg:grid-cols-10">
+      <Toaster position="top-left" />
       {/* Left side of the screen */}
       <div className=" bg-gradient-to-br from-blue-300 to-gray-900 lg:col-span-4">
         <div className="item-center flex flex-col items-center justify-center py-2 lg:h-screen">
           <div className="rounded-xl bg-gradient-to-br from-yellow-400 to-purple-600 p-2">
-            <img
-              className="w-44 rounded-xl object-cover lg:h-96 lg:w-72"
-              src={urlFor(collection.previewImage).url()}
-              alt="NFT"
-            />
+            {imageLoading ? (
+              <div className="m-10">
+                <img
+                  className="h-10 w-10 animate-spin"
+                  src="https://www.freeiconspng.com/thumbs/load-icon-png/load-icon-png-27.png"
+                  alt="nft"
+                ></img>
+              </div>
+            ) : (
+              <img
+                className="w-44 rounded-xl object-cover lg:h-auto lg:w-auto"
+                src={currentImage || urlFor(collection.mainImage).url()}
+                alt="NFT"
+              />
+            )}
           </div>
           <div className="space-y-2 p-5 text-center">
-            <h1 className="text-4xl font-bold text-white">{collection.nftcollectionName}</h1>
-            <h2 className="text-xl text-gray-300">
-              {collection.description}
-            </h2>
+            <h1 className="text-4xl font-bold text-white">
+              {collection.nftcollectionName}
+            </h1>
+            <h2 className="text-xl text-gray-300">{collection.description}</h2>
           </div>
         </div>
       </div>
 
       {/* Right side of the screen */}
       <div className="flex flex-1 flex-col p-12 lg:col-span-6">
-
         {/* Header */}
         <header className="flex items-center justify-between">
-            <Link href="/">
-          <h1 className="w-52 cursor-pointer text-xl font-extralight sm:w-80">
-            The{' '}
-            <span className="font-extrabold underline decoration-blue-300/50">
-              WIZ-ART
-            </span>{' '}
-            NFT Market Place
-          </h1>
+          <Link href="/">
+            <h1 className="w-52 cursor-pointer text-xl font-extralight sm:w-80">
+              The{' '}
+              <span className="font-extrabold underline decoration-blue-300/50">
+                WIZ-ART
+              </span>{' '}
+              NFT Market Place
+            </h1>
           </Link>
           <button
             onClick={() => (address ? disconnect() : connectWithMetaMask())}
             className="from rounded-full bg-gradient-to-br from-blue-400 to-gray-400 px-4 py-2 text-xs font-bold text-white lg:px-5 lg:py-3 lg:text-base"
           >
-            {address ? 'Sign Out' : 'Sign In'}
+            {address ? 'Disconnect Wallet' : 'Connect Wallet'}
           </button>
         </header>
 
@@ -78,14 +198,43 @@ function NFTDropPage({collection}:Props) {
           />
 
           <h1 className="text-3xl font-bold lg:text-5xl lg:font-extrabold">
-              {collection.title}
+            {collection.title}
           </h1>
-          <p className="pt-2 text-xl text-green-300">13 / 21 NFT's Claimed</p>
+          {loading ? (
+            <p className="pt-2 text-xl text-green-300"> Loading Supply...</p>
+          ) : (
+            <p className="pt-2 text-xl text-green-300">
+              {claimedSupply} / {totalSupply?.toString()} NFT's Claimed
+            </p>
+          )}
+          {loading && (
+            <img
+              className="h-20 w-20 object-contain"
+              src="https://i.pinimg.com/originals/fa/87/77/fa87774590186b287a5338d7c87afc0c.gif"
+              alt="loading"
+            />
+          )}
         </div>
 
         {/* Mint Button */}
-        <button className="from mt-10 h-16 w-full rounded-full bg-gradient-to-br from-gray-400 to-gray-900 font-bold text-white ">
-          Mint NFT (0.01 ETH)
+        <button
+          onClick={mintNFT}
+          disabled={
+            loading || claimedSupply === totalSupply?.toNumber() || !address
+          }
+          className="from mt-10 h-16 w-full rounded-full bg-gray-800 font-bold text-white disabled:bg-gray-400"
+        >
+          {loading ? (
+            <>Loading...</>
+          ) : claimedSupply === totalSupply?.toNumber() ? (
+            <>Sold Out</>
+          ) : !address ? (
+            <>Connect wallet to Mint</>
+          ) : priceLoading ? (
+            <span className="animate-pulse font-bold">Loading Price..</span>
+          ) : (
+            <span className="font-bold">Mint NFT({priceInEth} ETH)</span>
+          )}
         </button>
       </div>
     </div>
@@ -118,20 +267,19 @@ export const getServerSideProps: GetServerSideProps = async ({ params }) => {
           },
         },
       }`
-      const collection = await sanityClient.fetch(query,{
-          id: params?.id
-      });
+  const collection = await sanityClient.fetch(query, {
+    id: params?.id,
+  })
 
-      if(!collection) {
-          return {
-              notFound: true
-          }
-      }
+  if (!collection) {
+    return {
+      notFound: true,
+    }
+  }
 
-      return {
-          props:{
-              collection
-          }
-      }
-
+  return {
+    props: {
+      collection,
+    },
+  }
 }

@@ -13,7 +13,7 @@ const Home = ({ collections }: Props) => {
   return (
     <div className="max-w-6xl mx-auto flex flex-col min-h-screen py-20 px-10 2xl:px-0">
       <Head>
-        <title>NFT DROP</title>
+        <title>WIZ-ART</title>
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <h1 className="mb-5 text-4xl font-extralight">
@@ -23,7 +23,7 @@ const Home = ({ collections }: Props) => {
         </span>{' '}
         NFT Market Place
       </h1>
-      <main className="bg-slate-100 p-10 shadow-xl shadow-blue-200/70">
+      <main className="bg-slate-100 p-10 shadow-xl shadow-blue-200/70 rounded-xl">
         <div className="grid space-x-3 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
           {collections.map((collection) => (
             <Link href={`/nft/${collection.slug.current}`}>
