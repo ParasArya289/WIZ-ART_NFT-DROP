@@ -4,6 +4,7 @@ import {
   useDisconnect,
   useMetamask,
   useNFTDrop,
+  useWalletConnect,
 } from '@thirdweb-dev/react'
 import { GetServerSideProps } from 'next'
 import { sanityClient, urlFor } from '../../sanity'
@@ -15,6 +16,7 @@ import toast, { Toaster } from 'react-hot-toast'
 interface Props {
   collection: Collection
 }
+
 function NFTDropPage({ collection }: Props) {
   const [claimedSupply, setClaimedSupply] = useState<number>(0)
   const [totalSupply, setTotalSupply] = useState<BigNumber>()
@@ -29,11 +31,9 @@ function NFTDropPage({ collection }: Props) {
 
   ////Authentication///
   const connectWithMetaMask = useMetamask()
+  //   const connectWithWallectConnect = useWalletConnect()
   const address = useAddress()
   const disconnect = useDisconnect()
-
-
-
 
   useEffect(() => {
     if (!nftDrop) return
@@ -48,11 +48,12 @@ function NFTDropPage({ collection }: Props) {
   }, [nftDrop])
 
   ///////////// TEST
+
   useEffect(() => {
     const timeout = function () {
       return new Promise(function (_, reject) {
         setTimeout(function () {
-          reject(new Error(`Request took too long! Timeout after ${5} second`))
+          reject(new Error(`Request took too long! Timeout after ${8} second`))
         }, 8 * 1000)
       })
     }
@@ -60,13 +61,12 @@ function NFTDropPage({ collection }: Props) {
       try {
         setImageLoading(true)
         if (!nftDrop) return
-        const [{ image }]:any = await Promise.race([
+        const image:any = await Promise.race([
           nftDrop.getAllUnclaimed(),
           timeout(),
         ])
-        // const [{ image }] = await nftDrop.getAllUnclaimed()
-        console.log(image)
-        setCurrentImage(image)
+        console.log(image?.[0].image)
+        setCurrentImage(image?.[0].image)
       } catch (err) {
         console.log(err)
       } finally {
@@ -82,6 +82,7 @@ function NFTDropPage({ collection }: Props) {
 
     const fetchNFTDropData = async () => {
       setLoading(true)
+
       const claimed = await nftDrop.getAllClaimed()
       const total = await nftDrop.totalSupply()
       setClaimedSupply(claimed.length)
@@ -148,22 +149,26 @@ function NFTDropPage({ collection }: Props) {
   }
   return (
     <div className="flex h-screen flex-col lg:grid lg:grid-cols-10">
-      <Toaster position="top-left" />
+      <Toaster position="bottom-center" />
       {/* Left side of the screen */}
-      <div className=" bg-gradient-to-br from-blue-300 to-gray-900 lg:col-span-4">
+      <div className="bg-gradient-to-br from-blue-300 to-gray-900 lg:col-span-4">
         <div className="item-center flex flex-col items-center justify-center py-2 lg:h-screen">
-          <div className="rounded-xl bg-gradient-to-br from-yellow-400 to-purple-600 p-2">
+          <div
+            className={`${
+              imageLoading || loading ? ' animate-pulse' : ''
+            } rounded-xl bg-gradient-to-br from-yellow-400 to-purple-600 p-2`}
+          >
             {imageLoading ? (
-              <div className="m-10">
-                <img
+              <div className="h-40 w-40">
+                {/* <img
                   className="h-10 w-10 animate-spin"
                   src="https://www.freeiconspng.com/thumbs/load-icon-png/load-icon-png-27.png"
                   alt="nft"
-                ></img>
+                ></img> */}
               </div>
             ) : (
               <img
-                className="w-44 rounded-xl object-cover lg:h-56 lg:w-auto"
+                className={`w-44 rounded-xl object-cover lg:h-56 lg:w-auto`}
                 src={currentImage || urlFor(collection.previewImage).url()}
                 alt="NFT"
               />
@@ -210,7 +215,7 @@ function NFTDropPage({ collection }: Props) {
         {/* Content */}
         <div className="mt-10 flex flex-1 flex-col items-center space-y-6 text-center lg:justify-center lg:space-y-0">
           <img
-            className="w-80 object-cover pb-10 lg:h-60"
+            className="m-10 w-44 rounded-full object-cover lg:w-60"
             src={urlFor(collection.mainImage).url()}
             alt=""
           />
@@ -290,7 +295,7 @@ export const getServerSideProps: GetServerSideProps = async ({ params }) => {
   })
 
   if (!collection) {
-      //returns 404 page
+    //returns 404 page
     return {
       notFound: true,
     }
