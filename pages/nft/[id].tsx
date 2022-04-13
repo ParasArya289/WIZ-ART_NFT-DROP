@@ -13,9 +13,21 @@ import Link from 'next/link'
 import { BigNumber } from '@ethersproject/bignumber'
 import toast, { Toaster } from 'react-hot-toast'
 
+// import Dropdown from 'react-dropdown';
+// import 'react-dropdown/style.css';
+
+// const options = [
+//   , 'two', 'three'
+// ];
+// const defaultOption = options[0];
+
+
+
 interface Props {
   collection: Collection
 }
+
+
 
 function NFTDropPage({ collection }: Props) {
   const [claimedSupply, setClaimedSupply] = useState<number>(0)
@@ -24,9 +36,10 @@ function NFTDropPage({ collection }: Props) {
   const [loading, setLoading] = useState<boolean>(true)
   const [priceLoading, setPriceLoading] = useState<boolean>(true)
   const [imageLoading, setImageLoading] = useState<boolean>(true)
-
+  const [nextNftLoad, setNextNftLoad] = useState<boolean>(true);
+  
   const [currentImage, setCurrentImage] = useState<string>('')
-
+  
   const nftDrop = useNFTDrop(collection.address)
 
   ////Authentication///
@@ -40,12 +53,14 @@ function NFTDropPage({ collection }: Props) {
 
     const fetchPrice = async () => {
       setPriceLoading(true)
+
       const claimConditions = await nftDrop.claimConditions.getAll()
       setPriceInEth(claimConditions?.[0].currencyMetadata.displayValue)
+
       setPriceLoading(false)
     }
     fetchPrice()
-  }, [nftDrop])
+  }, [nftDrop,nextNftLoad])
 
   ///////////// TEST
 
@@ -53,8 +68,8 @@ function NFTDropPage({ collection }: Props) {
     const timeout = function () {
       return new Promise(function (_, reject) {
         setTimeout(function () {
-          reject(new Error(`Request took too long! Timeout after ${8} second`))
-        }, 8 * 1000)
+          reject(new Error(`Request took too long! Timeout after ${10} second`))
+        }, 20 * 1000)
       })
     }
     const fetchNextNFTImg = async () => {
@@ -74,7 +89,7 @@ function NFTDropPage({ collection }: Props) {
       }
     }
     fetchNextNFTImg()
-  }, [nftDrop])
+  }, [nftDrop,nextNftLoad])
 
   //fetch claimed and total info
   useEffect(() => {
@@ -91,7 +106,7 @@ function NFTDropPage({ collection }: Props) {
       setLoading(false)
     }
     fetchNFTDropData()
-  }, [nftDrop])
+  }, [nftDrop,nextNftLoad])
 
   const mintNFT = () => {
     if (!nftDrop || !address) return
@@ -115,6 +130,7 @@ function NFTDropPage({ collection }: Props) {
         const claimedTokenID = tx[0].id // id of the claimed NFT
         const claimedNFT = await tx[0].data()
 
+        setNextNftLoad(true);
         toast('Successfully Minted NFT', {
           duration: 8000,
           style: {
@@ -125,6 +141,7 @@ function NFTDropPage({ collection }: Props) {
             padding: '20px',
           },
         })
+        setNextNftLoad(false);
 
         // console.log(receipt)
         // console.log(claimedTokenID)
@@ -159,7 +176,7 @@ function NFTDropPage({ collection }: Props) {
             } rounded-xl bg-gradient-to-br from-yellow-400 to-purple-600 p-2`}
           >
             {imageLoading ? (
-              <div className="h-40 w-40">
+              <div className="w-44 h-44">
                 {/* <img
                   className="h-10 w-10 animate-spin"
                   src="https://www.freeiconspng.com/thumbs/load-icon-png/load-icon-png-27.png"
@@ -168,7 +185,7 @@ function NFTDropPage({ collection }: Props) {
               </div>
             ) : (
               <img
-                className={`w-44 rounded-xl object-cover lg:h-56 lg:w-auto`}
+                className={`h-44 w-44 rounded-xl object-cover lg:h-56 lg:w-56`}
                 src={currentImage || urlFor(collection.previewImage).url()}
                 alt="NFT"
               />
