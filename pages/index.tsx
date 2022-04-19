@@ -13,7 +13,7 @@ const Home = ({ collections }: Props) => {
   return (
     <div className="max-w-6xl mx-auto flex flex-col min-h-screen py-20 px-10 2xl:px-0">
       <Head>
-        <title>WIZ-ART</title>
+        <title>WIZ-ART | Home</title>
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <h1 className="mb-5 text-4xl font-extralight">

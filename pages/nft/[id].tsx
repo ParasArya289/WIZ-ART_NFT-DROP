@@ -12,39 +12,36 @@ import { Collection } from '../../typing'
 import Link from 'next/link'
 import { BigNumber } from '@ethersproject/bignumber'
 import toast, { Toaster } from 'react-hot-toast'
-
-// import Dropdown from 'react-dropdown';
-// import 'react-dropdown/style.css';
-
-// const options = [
-//   , 'two', 'three'
-// ];
-// const defaultOption = options[0];
-
-
+import Head from 'next/head'
 
 interface Props {
   collection: Collection
 }
 
-
-
 function NFTDropPage({ collection }: Props) {
   const [claimedSupply, setClaimedSupply] = useState<number>(0)
   const [totalSupply, setTotalSupply] = useState<BigNumber>()
+  const [name, setName] = useState<string>()
   const [priceInEth, setPriceInEth] = useState<string>()
   const [loading, setLoading] = useState<boolean>(true)
   const [priceLoading, setPriceLoading] = useState<boolean>(true)
   const [imageLoading, setImageLoading] = useState<boolean>(true)
-  const [nextNftLoad, setNextNftLoad] = useState<boolean>(true);
-  
+  const [nextNftLoad, setNextNftLoad] = useState<boolean>(true)
+
   const [currentImage, setCurrentImage] = useState<string>('')
-  
+
   const nftDrop = useNFTDrop(collection.address)
+
+  const data = async () => {
+    if (!nftDrop) return
+    const [{ properties }]: any = await nftDrop.getAllUnclaimed()
+    console.log(properties)
+  }
+  data()
 
   ////Authentication///
   const connectWithMetaMask = useMetamask()
-  //   const connectWithWallectConnect = useWalletConnect()
+  // const connectWithWallectConnect = useWalletConnect()
   const address = useAddress()
   const disconnect = useDisconnect()
 
@@ -60,9 +57,7 @@ function NFTDropPage({ collection }: Props) {
       setPriceLoading(false)
     }
     fetchPrice()
-  }, [nftDrop,nextNftLoad])
-
-  ///////////// TEST
+  }, [nftDrop, nextNftLoad])
 
   useEffect(() => {
     const timeout = function () {
@@ -76,12 +71,13 @@ function NFTDropPage({ collection }: Props) {
       try {
         setImageLoading(true)
         if (!nftDrop) return
-        const image:any = await Promise.race([
+        const dataNft: any = await Promise.race([
           nftDrop.getAllUnclaimed(),
           timeout(),
         ])
-        console.log(image?.[0].image)
-        setCurrentImage(image?.[0].image)
+
+        setCurrentImage(dataNft?.[0].image)
+        setName(dataNft?.[0].name)
       } catch (err) {
         console.log(err)
       } finally {
@@ -89,7 +85,7 @@ function NFTDropPage({ collection }: Props) {
       }
     }
     fetchNextNFTImg()
-  }, [nftDrop,nextNftLoad])
+  }, [nftDrop, nextNftLoad])
 
   //fetch claimed and total info
   useEffect(() => {
@@ -100,13 +96,14 @@ function NFTDropPage({ collection }: Props) {
 
       const claimed = await nftDrop.getAllClaimed()
       const total = await nftDrop.totalSupply()
+
       setClaimedSupply(claimed.length)
       setTotalSupply(total)
 
       setLoading(false)
     }
     fetchNFTDropData()
-  }, [nftDrop,nextNftLoad])
+  }, [nftDrop, nextNftLoad])
 
   const mintNFT = () => {
     if (!nftDrop || !address) return
@@ -130,7 +127,7 @@ function NFTDropPage({ collection }: Props) {
         const claimedTokenID = tx[0].id // id of the claimed NFT
         const claimedNFT = await tx[0].data()
 
-        setNextNftLoad(true);
+        setNextNftLoad(true)
         toast('Successfully Minted NFT', {
           duration: 8000,
           style: {
@@ -141,7 +138,7 @@ function NFTDropPage({ collection }: Props) {
             padding: '20px',
           },
         })
-        setNextNftLoad(false);
+        setNextNftLoad(false)
 
         // console.log(receipt)
         // console.log(claimedTokenID)
@@ -167,6 +164,9 @@ function NFTDropPage({ collection }: Props) {
   return (
     <div className="flex h-screen flex-col lg:grid lg:grid-cols-10">
       <Toaster position="bottom-center" />
+      <Head>
+        <title>WIZ-ART | NFT</title>
+      </Head>
       {/* Left side of the screen */}
       <div className="bg-gradient-to-br from-blue-300 to-gray-900 lg:col-span-4">
         <div className="item-center flex flex-col items-center justify-center py-2 lg:h-screen">
@@ -176,12 +176,7 @@ function NFTDropPage({ collection }: Props) {
             } rounded-xl bg-gradient-to-br from-yellow-400 to-purple-600 p-2`}
           >
             {imageLoading ? (
-              <div className="w-44 h-44">
-                {/* <img
-                  className="h-10 w-10 animate-spin"
-                  src="https://www.freeiconspng.com/thumbs/load-icon-png/load-icon-png-27.png"
-                  alt="nft"
-                ></img> */}
+              <div className="h-44 w-44">
               </div>
             ) : (
               <img
@@ -192,9 +187,19 @@ function NFTDropPage({ collection }: Props) {
             )}
           </div>
           <div className="space-y-2 p-5 text-center">
-            <h1 className="text-4xl font-bold text-white">
-              {collection.nftcollectionName}
-            </h1>
+            {imageLoading ? (
+              <div className="flex justify-center">
+                <img
+                  className="h-5 w-5 animate-spin"
+                  src="https://www.freeiconspng.com/thumbs/load-icon-png/load-icon-png-27.png"
+                  alt="nft"
+                ></img>
+              </div>
+            ) : (
+              <h1 className="text-4xl font-bold text-white">
+                {`${collection.nftcollectionName} | ${name ? name : "#1"}`}
+              </h1>
+            )}
             <h2 className="text-xl text-gray-300">{collection.description}</h2>
           </div>
         </div>
